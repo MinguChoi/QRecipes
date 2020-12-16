@@ -16,10 +16,9 @@ class MainTabBar: UITabBarController, UITabBarControllerDelegate {
     // MARK: - Lifecycle
     override func viewDidLoad() {
         super.viewDidLoad()
-        configureTabBar()
-        configureUI()
+        //configureTabBar()
+ 
     }
-    
     
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
@@ -36,13 +35,19 @@ class MainTabBar: UITabBarController, UITabBarControllerDelegate {
         let searchTab = barTabView(view: SearchVC(), image: "search")
         let middleTab = QRSacnVC()
         let favoriteTab = barTabView(view: FavoriteVC(), image: "favorite")
-        let settingTab = barTabView(view: SettingVC(), image: "setting")
-        
-        viewControllers = [homeTab, searchTab, middleTab, favoriteTab, settingTab]
-        tabBar.items?[2].isEnabled = false
+        let settingTab = barTabView(view: SettingVC(), image: "AddFriend")
+        if User.shared.email == "" {
+            viewControllers = [homeTab, searchTab, settingTab]
+            qrButton.isHidden = true
+        } else {
+            viewControllers = [homeTab, searchTab, middleTab, favoriteTab, settingTab]
+            displayQrButton()
+            qrButton.isHidden = false
+            tabBar.items?[2].isEnabled = false
+        }
     }
     
-    func configureUI() {
+    func displayQrButton() {
         view.addSubview(qrButton)
         qrButton.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(presentQRScanVC)))
         qrButton.isUserInteractionEnabled = true

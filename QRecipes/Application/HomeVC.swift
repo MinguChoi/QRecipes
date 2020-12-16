@@ -13,7 +13,7 @@ class HomeVC: UIViewController, UIGestureRecognizerDelegate {
     //MARK:- Properties
     let inset: CGFloat = 15.0
     
-    var recipes = [Recipe]() {
+    var recipes = [Recipe](){
         didSet {
             collectionView.reloadData()
         }
@@ -73,15 +73,13 @@ class HomeVC: UIViewController, UIGestureRecognizerDelegate {
     // MARK: - Navigation and pass data
     func fetchRecipes() {
         API.fetchRecipes { recipes in
-            self.recipes = recipes
+            self.recipes = recipes.sorted{$0.comments.count > $1.comments.count}
         }
     }
     
     func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
-        print("Selected Row \(indexPath.row)")
         let vc = RecipeInfoViewVC()
         vc.recipe = recipes[indexPath.row]
-        print("DEBUG:- \(recipes[indexPath.row].restaurant)")
         navigationController?.pushViewController(vc, animated: true)
     }
 }

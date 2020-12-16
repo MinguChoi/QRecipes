@@ -23,9 +23,7 @@ class UserModal {
 class SearchVC: UIViewController{
     //MARK:- Properties
     
-    //let navBar = UINavigationBar() //remove
-    
-    let searchBar = UISearchBar()
+    let searchBar = UISearchBar()//stack frame[text data, heap stack.....]
     let tableView = UITableView()
     let lbl = UILabel()
     
@@ -39,11 +37,10 @@ class SearchVC: UIViewController{
     }
     
     //MARK:- LifeCycles
-    override func viewDidLoad() {
+    override func viewDidLoad() { //running time
         super.viewDidLoad()
-        //configure()
+        
         configureUI()
-        //configureNavBar()
         configureSearchBar()
         setTableView()
         fetchRecipes()
@@ -53,7 +50,7 @@ class SearchVC: UIViewController{
         tableView.delegate = self
         tableView.dataSource = self
         tableView.separatorColor = UIColor.clear
-        //tableView.backgroundColor = UIColor.white
+        tableView.backgroundColor = UIColor.white
         
         view.addSubview(tableView)
         
@@ -71,35 +68,19 @@ class SearchVC: UIViewController{
     func configureSearchBar(){
         searchBar.searchBarStyle = UISearchBar.Style.prominent
         searchBar.placeholder = " Search..."
-        searchBar.sizeToFit()
+        //searchBar.sizeToFit()
         searchBar.isTranslucent = false
         searchBar.delegate = self
-        searchBar.setShowsCancelButton(true, animated: false)
-        
-        // change the dark mode issue for search bar background
-        
         searchBar.barTintColor = UIColor.white
-        
-                //searchBar.barStyle = .black
+        searchBar.tintColor = UIColor.orange
+        searchBar.barStyle = .black
         view.addSubview(searchBar)
         searchBar.snp.makeConstraints { make in
-            make.top.equalToSuperview().offset(40)
+            make.top.equalTo(view.safeAreaLayoutGuide.snp.top)
             make.left.equalTo(view)
             make.right.equalTo(view)
         }
     }
-    
-//    func configureNavBar() {
-//        navBar.delegate = self
-//        navBar.setItems([UINavigationItem(title: "Search")], animated: false)
-//
-//        view.addSubview(navBar)
-//        navBar.snp.makeConstraints { make in
-//            make.height.equalTo(44)
-//            make.top.equalToSuperview()
-//            make.left.right.equalToSuperview()
-//        }
-//    }
     
     private func configureUI() {
         view.backgroundColor = .white
@@ -111,6 +92,26 @@ class SearchVC: UIViewController{
             self.fullRecipes = recipes
         }
     }
+    /*
+    @objc func handleShowSearchBar() {
+           searchBar.becomeFirstResponder()
+           search(shouldShow: true)
+       }
+    func showSearchBarButton(shouldShow: Bool) {
+        if shouldShow {
+            navigationItem.rightBarButtonItem = UIBarButtonItem(barButtonSystemItem: .search,
+                                                                target: self,
+                                                                action: #selector(handleShowSearchBar))
+        } else {
+            navigationItem.rightBarButtonItem = nil
+        }
+    }
+    func search(shouldShow: Bool) {
+        showSearchBarButton(shouldShow: !shouldShow)
+        searchBar.showsCancelButton = shouldShow
+        navigationItem.titleView = shouldShow ? searchBar : nil
+    }
+ */
 }
 
 extension SearchVC: UISearchBarDelegate{
@@ -126,19 +127,28 @@ extension SearchVC: UISearchBarDelegate{
             }
         }
     }
+    func searchBarTextDidBeginEditing(_ searchBar: UISearchBar) {
+        searchBar.showsCancelButton = true
+        print("Search bar editing did begin..")
+    }
     func searchBarTextDidEndEditing(_ searchBar: UISearchBar) {
         searchBar.showsCancelButton = true
+        print("Search bar editing did end..")
+        searchBar.resignFirstResponder()
     }
+    
     func searchBarCancelButtonClicked(_ searchBar: UISearchBar) {
         searchBar.text = nil
-        
+        searchBar.showsCancelButton = false
         searchBar.resignFirstResponder()
-        searchBar.endEditing(true)
+        tableView.reloadData()
         recipes = fullRecipes
     }
     
     func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
-        searchBar.resignFirstResponder()
+        //searchBar.resignFirstResponder()
+        searchBar.text = ""
+        searchBar.endEditing(true)
     }
     
     // MARK: - Navigation and pass data

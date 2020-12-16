@@ -26,12 +26,11 @@ struct RestaurantResponse {
     
     init(uid: String, dictionary: [String: AnyObject]) {
         self.uid = uid
-        
         self.name = dictionary["name"] as? String ?? ""
         self.address = dictionary["address"] as? String ?? ""
         self.phone = dictionary["phone"] as? String ?? ""
         self.recipes = dictionary["recipes"] as? [String] ?? [""]
-
+        
         if let restaurantImageUrl = dictionary["restaurantImageUrl"] as? String {
             guard let url = URL(string: restaurantImageUrl)
             else { return }
@@ -73,7 +72,7 @@ extension API {
             if restaurant.name == name {
                 completion(restaurant)
             } else {
-                print("DEBUG:- input \(name) <-> snap \(restaurant.name)")
+                //print("DEBUG:- input \(name) <-> snap \(restaurant.name)")
             }
         }
         //completion(nil)

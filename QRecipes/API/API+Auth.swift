@@ -70,7 +70,8 @@ extension API {
                               "lastName": user.lastName,
                               "favorite": user.favorite,
                               "purchased": user.purchased,
-                              "profileImageUrl": profileImageUrl] as [String : AnyObject]
+                              "profileImageUrl": profileImageUrl
+                            ] as [String : AnyObject]
 
                 DB_USERS.child(uid).updateChildValues(values, withCompletionBlock: completion)
                }
@@ -78,18 +79,19 @@ extension API {
         }
     }
     
-    static func fetchUser(uid: String, completion: @escaping(UserInfo) -> Void) {
+    static func fetchUser(uid: String, updateUser: Bool = true, completion: @escaping(UserInfo) -> Void) {
         
         DB_USERS.child(uid).observe(DataEventType.value, with: { (snapshot) in
             guard let dictionary = snapshot.value as? [String: AnyObject] else { return }
 
             let user = UserInfo(uid: uid, dictionary: dictionary)
-            User.shared.email = user.email
-            User.shared.firstName = user.firstName
-            User.shared.lastName = user.lastName
-            User.shared.profileImage = user.profileImageUrl
+            if updateUser {
+                User.shared.email = user.email
+                User.shared.firstName = user.firstName
+                User.shared.lastName = user.lastName
+                User.shared.profileImage = user.profileImageUrl
+            }
             completion(user)
-            
         })
     }
     
@@ -100,7 +102,8 @@ extension API {
                       "lastName": User.shared.lastName,
                       "favorite": User.shared.favorite,
                       "purchased": User.shared.purchased,
-                      "profileImageUrl": User.shared.profileImage?.absoluteString] as [String : AnyObject]
+                      "profileImageUrl": User.shared.profileImage?.absoluteString
+                      ] as [String : AnyObject]
 
         DB_USERS.child(uid).updateChildValues(values, withCompletionBlock: completion)
     }

@@ -19,6 +19,10 @@ struct newRecipe {
     var recipeImage: UIImage
 }
 
+struct commentsResponse {
+    
+}
+
 extension API {
     static func generateRestaurant(image: UIImage, recipes: [newRecipe], completion: @escaping(Error?, DatabaseReference?) -> Void) {
         guard let imageData = image.jpegData(compressionQuality: 0.3) else { return }
@@ -170,10 +174,23 @@ extension API {
             let value = snapshot.value as? NSDictionary
             let purchased = value?["purchased"] as? [String : AnyObject] ?? [:]
             User.shared.purchased = purchased // update user info when fetch
+            //print("DEBUG:-purchsed: \(purchased)")
+            
             let validUid = checkValidity(purchaseds: purchased)
             
             var purchasedRecipes = [Recipe]()
-            DB_RECIPE.observe(.childAdded) { (snapshot) in
+            for uid in validUid {
+                DB_RECIPE.observe(.childAdded) { (snapshot) in
+                    guard let dictionary = snapshot.value as? [String : AnyObject] else {return}
+                    let recipeUid = snapshot.key
+                    if uid == recipeUid {
+                        let recipe = Recipe(uid: recipeUid, dictionary: dictionary)
+                        purchasedRecipes.append(recipe)
+                    }
+                    completion(purchasedRecipes)
+                }
+            }
+            /*DB_RECIPE.observe(.childAdded) { (snapshot) in
                 guard let dictionary = snapshot.value as? [String : AnyObject] else {return}
                 let uid = snapshot.key
                 if validUid.contains(uid) {
@@ -181,20 +198,44 @@ extension API {
                     purchasedRecipes.append(recipe)
                 }
                 completion(purchasedRecipes)
+            }*/
+        })
+        
+    }
+    
+    static func fetchUploadedRecipes(completion: @escaping([Recipe]) -> Void) {
+        guard let uid = Auth.auth().currentUser?.uid else { return }
+        
+        DB_OWNER.child(uid).observe(DataEventType.value, with: { (snapshot) in
+            let value = snapshot.value as? NSDictionary
+            let uploaded = value?["recipes"] as? [String:AnyObject] ?? [:]
+            Owner.shared.recipes = uploaded // update owner info when fetch
+            
+            var uploadedRecipes = [Recipe]()
+            DB_RECIPE.observe(.childAdded) { (snapshot) in
+                guard let dictionary = snapshot.value as? [String : AnyObject] else {return}
+                let recipeUid = snapshot.key
+                if uid.contains(recipeUid)
+                {
+                    let recipe = Recipe(uid: recipeUid, dictionary: dictionary)
+                    uploadedRecipes.append(recipe)
+                }
+                completion(uploadedRecipes)
             }
         })
     }
     
     static func checkValidity(purchaseds: [String:AnyObject]) -> [String] {
-        let now = Date()
+        
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
         
         var valid = [""]
+        let sortedPurchased = purchaseds.sorted{dateFormatter.date(from: $0.value["purchaseDate"] as? String ?? "") ?? Date() > dateFormatter.date(from: $1.value["purchaseDate"] as? String ?? "") ?? Date()}
         
         if purchaseds.count > 0 {
-            for purchased in purchaseds {
-                if dateFormatter.date(from: purchased.value["expirationDate"] as? String ?? "") ?? now > now
+            for purchased in sortedPurchased {
+                if dateFormatter.date(from: purchased.value["expirationDate"] as? String ?? "") ?? Date() > Date()
                 {
                     valid.append(purchased.key)
                 }
@@ -223,20 +264,44 @@ extension API {
             
             let updates = ["purchased": purchased]
             DB_USERS.child(uid).updateChildValues(updates, withCompletionBlock: completion)
-            }) { (error) in
-                    print(error.localizedDescription)
-                }
+            })
     }
     
-    static func fetchReceipt(completion: @escaping([String:AnyObject]) -> Void) {
+    static func fetchReceipt(completion: @escaping([Dictionary<String, AnyObject>.Element]) -> Void) {
         guard let uid = Auth.auth().currentUser?.uid else { return }
         
         DB_USERS.child(uid).observe(DataEventType.value, with: { (snapshot) in
             let value = snapshot.value as? NSDictionary
             let purchased = value?["purchased"] as? [String : AnyObject] ?? [:]
+            let dateFormatter = DateFormatter()
+            dateFormatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
+            let sortedPurchased = purchased.sorted{dateFormatter.date(from: $0.value["purchaseDate"] as? String ?? "") ?? Date() > dateFormatter.date(from: $1.value["purchaseDate"] as? String ?? "") ?? Date()}
+            
             User.shared.purchased = purchased
             
-            completion(purchased)
+            completion(sortedPurchased)
         })
     }
+    
+    static func postComment(recipeUID: String, text: String, userUID: String, completion: @escaping(Error?, DatabaseReference?) -> Void) {
+        var hadPost = false
+
+        DB_RECIPE.child(recipeUID).observe(DataEventType.value, with:  {
+            snapshot in
+            guard let dictionary = snapshot.value as? NSMutableDictionary,
+                  var commentsDic = dictionary["comments"] as? [[String: Any]]
+            else { return }
+            if !hadPost {
+                let now = Date().getFormattedDate(format: "yyyy-MM-dd HH:mm:ss")
+                commentsDic.append(["date": now,
+                                    "text": text,
+                                    "user":userUID])
+                let update = ["comments" : commentsDic]
+                DB_RECIPE.child(recipeUID).updateChildValues(update, withCompletionBlock: completion)
+                hadPost = true
+            }
+        })
+    }
+    
+    //static func fetchComments(completion:)
 }

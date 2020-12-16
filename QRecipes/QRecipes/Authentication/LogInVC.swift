@@ -23,6 +23,7 @@ class LogInVC: UIViewController, UIGestureRecognizerDelegate, GIDSignInDelegate,
     private let ratio = SplashVC.shared.ratio
 
     private let viewModel = AuthenticationVM()
+    private let backButton = UIButton()
     private let titleLabel = UILabel()
     private lazy var emailTextField = viewModel.textField(placeHolder: "Email", target: self, action: #selector(emailTextFieldDidChange), type: .email)
     private lazy var passwordTextField = viewModel.textField(placeHolder: "Password", target: self, action: #selector(passwordTextFieldDidchange), type: .password, buttonAction: #selector(toggleEyeButton))
@@ -46,6 +47,7 @@ class LogInVC: UIViewController, UIGestureRecognizerDelegate, GIDSignInDelegate,
     private var accounts = [SampleAccount]()
     private var keyboardHeight: CGFloat = 0.0
     private var buttonConstraint: NSLayoutConstraint?
+    
     
     //MARK:- LifeCycles
     override func viewDidLoad() {
@@ -72,7 +74,7 @@ class LogInVC: UIViewController, UIGestureRecognizerDelegate, GIDSignInDelegate,
         accounts = [SampleAccount(email: "kyo@gmail.com", password: "0000"),
                     SampleAccount(email: "0", password: "0"),
                     SampleAccount(email: "yiheng@gmail.com", password: "0000"),
-                    SampleAccount(email: "den@gmail.com", password: "0000"),
+                    SampleAccount(email: "dan@gmail.com", password: "0000"),
                     SampleAccount(email: "mingu@gmail.com", password: "0000") ]
     }
     
@@ -285,6 +287,7 @@ class LogInVC: UIViewController, UIGestureRecognizerDelegate, GIDSignInDelegate,
         guard let button = passwordTextField.subviews[2] as? UIButton,
               let textField = passwordTextField.subviews[0] as? UITextField
         else { return }
+        
         if isPasswodHideen {
             button.setImage(UIImage(named: "eyeOff"), for: .normal)
             textField.isSecureTextEntry = false
@@ -304,12 +307,10 @@ class LogInVC: UIViewController, UIGestureRecognizerDelegate, GIDSignInDelegate,
         rememberMe = !rememberMe
         
         if rememberMe {
-            rememberMeButton.setImage(UIImage(systemName: "heart"), for: .normal)
-        }
-        else {
+            rememberMeButton.setImage(UIImage(systemName: "checkmark"), for: .normal)
+        } else {
             rememberMeButton.setImage(nil, for: .normal)
         }
-        //print("DEBUG:- rememberMe value: \(rememberMe)")
     }
     
     @objc func logInButton() {
@@ -323,33 +324,56 @@ class LogInVC: UIViewController, UIGestureRecognizerDelegate, GIDSignInDelegate,
                     strongSelf.warningLabel.text = error.localizedDescription
                     return
                 }
+                
                 if strongSelf.rememberMe == true {
                     UserDefaults.standard.setIsLoggedIn(value: true)
                     UserDefaults.standard.setEmail(value: lowerCaseEmail)
                     UserDefaults.standard.setPassword(value: strongSelf.password)
                 }
-                guard let result = result else { return }
-                API.fetchUser(uid: result.user.uid) { response in
-                    User.shared.email = response.email
-                    User.shared.firstName = response.firstName
-                    User.shared.lastName = response.lastName
-                    User.shared.favorite = response.favorite
-                    User.shared.purchased = response.purchased
-                    User.shared.profileImage = response.profileImageUrl
-                }
                 
-                DispatchQueue.main.async {
-                    let navigation = UINavigationController(rootViewController: MainTabBar.shared)
-                    navigation.modalPresentationStyle = .fullScreen
-                    navigation.navigationBar.isHidden = true
-                    strongSelf.present(navigation, animated: false, completion: nil)
-                }
+                guard let result = result else { return }
+                
+                DB_OWNER.child(result.user.uid).observeSingleEvent(of: .value, with: { (snapshot) in
+                    if snapshot.exists(){
+                        API.fetchOwner(uid: result.user.uid) { response in
+                            Owner.shared.email = response.email
+                            Owner.shared.restaurantName = response.restaurantName
+                            Owner.shared.phoneNumber = response.phoneNumber
+                            Owner.shared.location = response.location
+                            Owner.shared.restaurantImage = response.restaurantImageUrl
+                            
+                            strongSelf.presentMainTabBar()
+                        }
+                    }
+                    else {
+                        API.fetchUser(uid: result.user.uid) { response in
+                            User.shared.email = response.email
+                            User.shared.firstName = response.firstName
+                            User.shared.lastName = response.lastName
+                            User.shared.favorite = response.favorite
+                            User.shared.purchased = response.purchased
+                            User.shared.profileImage = response.profileImageUrl
+                            
+                            strongSelf.presentMainTabBar()
+                        }
+                    }
+                })
             }
         }
     }
     
+    func presentMainTabBar() {
+        DispatchQueue.main.async {
+            let navigation = UINavigationController(rootViewController: MainTabBar.shared)
+            navigation.modalPresentationStyle = .fullScreen
+            navigation.navigationBar.isHidden = true
+            MainTabBar.shared.configureTabBar()
+            self.present(navigation, animated: false, completion: nil)
+        }
+    }
+    
     @objc func presentSignUpVC() {
-        navigationController?.pushViewController(SignUpVC(), animated: true)
+        navigationController?.pushViewController(AccountTypeSelectionVC(), animated: true)
     }
     
     func sign(_ signIn: GIDSignIn!, didSignInFor user: GIDGoogleUser!, withError error: Error?){
@@ -378,6 +402,8 @@ class LogInVC: UIViewController, UIGestureRecognizerDelegate, GIDSignInDelegate,
                     let navigation = UINavigationController(rootViewController: MainTabBar.shared)
                     navigation.modalPresentationStyle = .fullScreen
                     navigation.navigationBar.isHidden = true
+                    MainTabBar.shared.configureTabBar()
+                    
                     self.present(navigation, animated: false, completion: nil)
                 }
             }
@@ -401,6 +427,8 @@ class LogInVC: UIViewController, UIGestureRecognizerDelegate, GIDSignInDelegate,
                     let navigation = UINavigationController(rootViewController: MainTabBar.shared)
                     navigation.modalPresentationStyle = .fullScreen
                     navigation.navigationBar.isHidden = true
+                    MainTabBar.shared.configureTabBar()
+
                     strongSelf.present(navigation, animated: false, completion: nil)
                 }
             }
